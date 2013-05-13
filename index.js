@@ -87,17 +87,14 @@ function find (base, options, cb) {
           return em.emit('end');
         }
         if (s.isDirectory()) {
-            finder(base, em.emit.bind(em, 'end'));
-        }
-        else if (s.isSymbolicLink()) {
-            if (cb) cb(base, s);
-            em.emit('link', base, s);
-            em.emit('end');
+          finder(base, em.emit.bind(em, 'end'));
         }
         else {
-            if (cb) cb(base, s);
-            em.emit('file', base, s);
-            em.emit('end');
+          if (cb) cb(base, s);
+          var eventName = s.isSymbolicLink() ? 'link' : 'file';
+          em.emit('path', base, s);
+          em.emit(eventName, base, s);
+          em.emit('end');
         }
     });
 

@@ -36,10 +36,31 @@ exports.unknown_file = function () {
 
     var finder = find(__dirname + '/dunno');
     finder.on('error', function (err) {
-      assert.ok(err instanceof Error)
+      assert.ok(err instanceof Error);
     });
     finder.on('end', function () {
         clearTimeout(to);
         assert.ok('should be called even for an error');
     });
 };
+
+exports.file_as_root = function () {
+    var _pathCalled, _fileCalled, to = setTimeout(function () {
+        assert.fail('never ended');
+    }, 5000);
+
+
+    var finder = find(__dirname + '/foo/x');
+    finder.on('file', function () {
+        _fileCalled = true;
+    });
+    finder.on('path', function () {
+        _pathCalled = true;
+    });
+    finder.on('end', function () {
+        clearTimeout(to);
+        assert.ok(_pathCalled === true);
+        assert.ok(_fileCalled === true);
+    });
+};
+

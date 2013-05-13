@@ -24,7 +24,7 @@ function find (base, options, cb) {
     }
     var em = new EventEmitter;
     var inodeSeen = createInodeChecker();
-    
+
     function finder (dir, f) {
         Seq()
             .seq(fs.readdir, dir, Seq)
@@ -40,14 +40,14 @@ function find (base, options, cb) {
             .seqEach(function (file) {
                 var stat = this.vars[file];
                 if (cb) cb(file, stat);
-                
+
                 if (inodeSeen(stat.ino)) {
                     // already seen this inode, probably a recursive symlink
                     this(null);
                 }
                 else {
                     em.emit('path', file, stat);
-                    
+
                     if (stat.isSymbolicLink()) {
                         em.emit('link', file, stat);
                         if (options && options.follow_symlinks) {
@@ -80,10 +80,11 @@ function find (base, options, cb) {
             .catch(em.emit.bind(em, 'error'))
         ;
     }
-    
+
     fs.lstat(base, function (err, s) {
         if (err) {
-            em.emit('error', err);
+          em.emit('error', err);
+          return em.emit('end');
         }
         if (s.isDirectory()) {
             finder(base, em.emit.bind(em, 'end'));
@@ -99,7 +100,7 @@ function find (base, options, cb) {
             em.emit('end');
         }
     });
-    
+
     return em;
 };
 

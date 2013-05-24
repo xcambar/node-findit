@@ -15,6 +15,27 @@ function createInodeChecker() {
     }
 }
 
+function depth (options) {
+  options = options || {};
+  var max = !options.hasOwnProperty('maxDepth') ? Infinity : (isNan(+options.maxDepth) ? Infinity : options.maxDepth),
+      min = !options.hasOwnProperty('minDepth') ? 0 : (isNan(+options.minDepth) ? 0 : options.minDepth),
+      _depth;
+  if (options.hasOwnProperty('depth')) {
+    if (!options.depth) {
+      _depth = 0;
+    } else if (isNaN(+options.depth)) {
+      throw new TypeError('invalid depth given.');
+    } else {
+      _depth = +options.depth;
+      max = _depth;
+      min = _depth;
+    }
+  }
+  return function (d) {
+    return d >= min && d <= max;
+  };
+}
+
 exports = module.exports = find;
 exports.find = find;
 function find (base, options, cb) {
@@ -22,10 +43,11 @@ function find (base, options, cb) {
     if (typeof(cb) !== 'function') {
         cb = undefined;
     }
+    var depthCheck = depth(options);
     var em = new EventEmitter;
     var inodeSeen = createInodeChecker();
 
-    function finder (dir, f) {
+    function finder (dir, d, f) {
         Seq()
             .seq(fs.readdir, dir, Seq)
             .flatten()
@@ -57,7 +79,7 @@ function find (base, options, cb) {
                                 if (err) {
                                   em.emit('error', err);
                                 } else {
-                                  finder(path.resolve(path.dir(file), resolvedPath));
+                                  finder(path.resolve(path.dir(file), d, resolvedPath));
                                 }
                               });
                             }
@@ -68,7 +90,9 @@ function find (base, options, cb) {
                     }
                     else if (stat.isDirectory()) {
                         em.emit('directory', file, stat);
-                        finder(file, this);
+                        if (depthCheck(d + 1)) {
+                          finder(file, d + 1, this);
+                        }
                     }
                     else {
                         em.emit('file', file, stat);
@@ -81,6 +105,9 @@ function find (base, options, cb) {
         ;
     }
 
+    if (!depthCheck(0)) {
+      return em.emit('end');
+    }
     fs.lstat(base, function (err, s) {
         if (err) {
           em.emit('error', err);
@@ -88,7 +115,7 @@ function find (base, options, cb) {
         }
         em.emit('path', base, s);
         if (s.isDirectory()) {
-          finder(base, em.emit.bind(em, 'end'));
+          finder(base, 1, em.emit.bind(em, 'end'));
         }
         else {
           if (cb) cb(base, s);

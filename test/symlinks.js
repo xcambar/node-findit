@@ -47,7 +47,7 @@ exports.links = function() {
     find_helper(__dirname + '/symlinks/dir1', { follow_symlinks: false }, function(data) {
         assert.eql(['dangling-symlink', 'link-to-dir2', 'link-to-file'], data.symlinks);
         assert.eql(['file1'], data.files);
-        assert.eql([], data.dirs);
+        assert.eql(['dir1'], data.dirs);
     });
 };
 

@@ -30,6 +30,7 @@ exports.foo = function () {
     finder.on('end', function () {
         clearTimeout(to);
         var ref = {
+            '' : true,
             'a' : true,
             'a/b' : true,
             'a/b/c' : true,
@@ -39,18 +40,26 @@ exports.foo = function () {
             'a/b/c/w' : false,
         };
 
+        Object.keys(ref).forEach(function (f) {
+          var _k = [__dirname, 'foo'];
+          if (f) {
+            _k.push(f);
+          }
+          ref[_k.join('/')] = ref[f];
+          delete ref[f];
+        });
+
         assert.eql(Object.keys(ref).length, Object.keys(ps).length);
         var count = { dirs : 0, files : 0, paths : 0 };
 
         Object.keys(ref).forEach(function (key) {
-            var file = __dirname + '/foo/' + key;
-            assert.eql(ref[key], ps[file]);
+            assert.eql(ref[key], ps[key]);
             if (ref[key]) {
-                assert.ok(dirs.indexOf(file) >= 0);
+                assert.ok(dirs.indexOf(key) >= 0);
                 count.dirs ++;
             }
             else {
-                assert.ok(files.indexOf(file) >= 0);
+                assert.ok(files.indexOf(key) >= 0);
                 count.files ++;
             }
         });

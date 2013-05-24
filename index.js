@@ -86,12 +86,13 @@ function find (base, options, cb) {
           em.emit('error', err);
           return em.emit('end');
         }
+        if (cb) cb(base, s);
         em.emit('path', base, s);
         if (s.isDirectory()) {
+          em.emit('directory', base, s);
           finder(base, em.emit.bind(em, 'end'));
         }
         else {
-          if (cb) cb(base, s);
           var eventName = s.isSymbolicLink() ? 'link' : 'file';
           em.emit(eventName, base, s);
           em.emit('end');

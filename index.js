@@ -23,7 +23,8 @@ function depth (options) {
   if (options.hasOwnProperty('depth')) {
     if (!options.depth) {
       _depth = 0;
-    } else if (isNaN(+options.depth)) {
+    }
+    if (isNaN(+options.depth)) {
       throw new TypeError('invalid depth given.');
     } else {
       _depth = +options.depth;
@@ -31,9 +32,14 @@ function depth (options) {
       min = _depth;
     }
   }
-  return function (d) {
-    return d >= min && d <= max;
-  };
+  return {
+    quit: function (d) {
+      return d > max;
+    },
+    valid: function (d) {
+      return d >= min && d <= max;
+    }
+  }
 }
 
 exports = module.exports = find;
@@ -61,17 +67,22 @@ function find (base, options, cb) {
             .flatten()
             .seqEach(function (file) {
                 var stat = this.vars[file];
-                if (cb) cb(file, stat);
+                var isValid = depthCheck.valid(d);
+                if (cb && isValid) cb(file, stat);
 
                 if (inodeSeen(stat.ino)) {
                     // already seen this inode, probably a recursive symlink
                     this(null);
                 }
                 else {
-                    em.emit('path', file, stat);
+                    if (isValid || stat.isDirectory()) {
+                      em.emit('path', file, stat);
+                    }
 
                     if (stat.isSymbolicLink()) {
-                        em.emit('link', file, stat);
+                        if (isValid) {
+                          em.emit('link', file, stat);
+                        }
                         if (options && options.follow_symlinks) {
                           path.exists(file, function(exists) {
                             if (exists) {
@@ -90,12 +101,14 @@ function find (base, options, cb) {
                     }
                     else if (stat.isDirectory()) {
                         em.emit('directory', file, stat);
-                        if (depthCheck(d + 1)) {
+                        if (!depthCheck.quit(d + 1)) {
                           finder(file, d + 1, this);
                         }
                     }
                     else {
-                        em.emit('file', file, stat);
+                        if (isValid) {
+                          em.emit('file', file, stat);
+                        }
                         this(null);
                     }
                 }
@@ -105,26 +118,28 @@ function find (base, options, cb) {
         ;
     }
 
-    if (!depthCheck(0)) {
-      return em.emit('end');
+    if (depthCheck.quit(0)) {
+      em.emit('end');
+    } else {
+      fs.lstat(base, function (err, s) {
+          if (err) {
+            em.emit('error', err);
+            return em.emit('end');
+          }
+          var isDir = s.isDirectory();
+          if(depthCheck.valid(0)) {
+            if (cb) cb(base, s);
+            em.emit('path', base, s);
+            var eventName = isDir ? 'directory' : (s.isSymbolicLink() ? 'link' : 'file');
+            em.emit(eventName, base, s);
+          }
+          if (isDir && depthCheck.valid(1)) {
+            finder(base, 1, em.emit.bind(em, 'end'));
+          } else {
+            em.emit('end');
+          }
+      });
     }
-    fs.lstat(base, function (err, s) {
-        if (err) {
-          em.emit('error', err);
-          return em.emit('end');
-        }
-        if (cb) cb(base, s);
-        em.emit('path', base, s);
-        if (s.isDirectory()) {
-          em.emit('directory', base, s);
-          finder(base, 1, em.emit.bind(em, 'end'));
-        }
-        else {
-          var eventName = s.isSymbolicLink() ? 'link' : 'file';
-          em.emit(eventName, base, s);
-          em.emit('end');
-        }
-    });
 
     return em;
 };

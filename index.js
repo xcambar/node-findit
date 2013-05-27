@@ -103,6 +103,8 @@ function find (base, options, cb) {
                         em.emit('directory', file, stat);
                         if (!depthCheck.quit(d + 1)) {
                           finder(file, d + 1, this);
+                        } else {
+                          this(null);
                         }
                     }
                     else {

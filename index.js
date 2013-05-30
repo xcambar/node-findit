@@ -17,8 +17,8 @@ function createInodeChecker() {
 
 function depth (options) {
   options = options || {};
-  var max = !options.hasOwnProperty('maxDepth') ? Infinity : (isNan(+options.maxDepth) ? Infinity : options.maxDepth),
-      min = !options.hasOwnProperty('minDepth') ? 0 : (isNan(+options.minDepth) ? 0 : options.minDepth),
+  var max = !options.hasOwnProperty('maxDepth') ? Infinity : (isNaN(+options.maxDepth) ? Infinity : options.maxDepth),
+      min = !options.hasOwnProperty('minDepth') ? 0 : (isNaN(+options.minDepth) ? 0 : options.minDepth),
       _depth;
   if (options.hasOwnProperty('depth')) {
     if (!options.depth) {
